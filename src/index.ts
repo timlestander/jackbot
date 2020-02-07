@@ -1,52 +1,69 @@
-import express from 'express';
-import bodyParser from 'body-parser';
-import axios from 'axios';
-import schedule from 'node-schedule';
+require("dotenv").config();
+import express from "express";
+import bodyParser from "body-parser";
+import axios from "axios";
+import { LotteryRow } from "./database";
+import mongoose from "mongoose";
+import moment from "moment";
 
-schedule.scheduleJob("0 5 * * 6", () => {
-  lotteryMap.clear();
-})
-
-const RESULT_API_URL: string = "https://www.lottoland.com/api/drawings/euroJackpot";
+const RESULT_API_URL: string =
+  "https://www.lottoland.com/api/drawings/euroJackpot";
 const EURO_IN_SEK: number = 10.59;
 
-const app = express();
+mongoose.connection.on(
+  "error",
+  console.error.bind(console, "connection error:")
+);
+mongoose.connection.on("open", function() {
+  console.log("Connected to MongoDatabse");
+});
 
-const lotteryMap: Map<string, string> = new Map<string, string>();
+const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.post('/eurojackpot', async (req: any, res: any) => {
-  const command: string = req.body.text ? req.body.text : 'help';
+app.post("/eurojackpot", async (req: any, res: any) => {
+  const command: string = req.body.text ? req.body.text : "help";
   const team: string = req.body.team_id;
 
-  if (command === 'go') {
-    if (!lotteryMap.has(team)) {
-      lotteryMap.set(team, `Trolig vinstrad: ${generateNumbers(5, 50)} med bonusnummer ${generateNumbers(2, 10)}`);
+  if (command === "go") {
+    let lotteryRow = await LotteryRow.findOne({
+      team_id: team,
+      week: moment().isoWeek()
+    });
+    if (!lotteryRow) {
+      lotteryRow = await LotteryRow.create({
+        team_id: team,
+        week: moment().isoWeek(),
+        row: `Trolig vinstrad: ${generateNumbers(
+          5,
+          50
+        )} med bonusnummer ${generateNumbers(2, 10)}`
+      });
     }
 
     return res.status(200).send({
-      "response_type": "in_channel",
-      "text": lotteryMap.get(team)
+      response_type: "in_channel",
+      text: lotteryRow.row
     });
-  } else if (command === 'result') {
+  } else if (command === "result") {
     const resultString: string = await generateResult();
     return res.status(200).send({
-      "response_type": "in_channel",
-      "text": resultString
-    })
-  } else if (command === 'jackpot') {
+      response_type: "in_channel",
+      text: resultString
+    });
+  } else if (command === "jackpot") {
     const jackpot: number = await getJackpot();
     return res.status(200).send({
-      "response_type": "in_channel",
-      "text": `Jackpotten för nästa dragning är ish ${jackpot} millar (eurokurs ${EURO_IN_SEK})`
-    })
+      response_type: "in_channel",
+      text: `Jackpotten för nästa dragning är ish ${jackpot} millar (eurokurs ${EURO_IN_SEK})`
+    });
   } else {
     return res.status(200).send({
-      "response_type": "ephemeral",
-      "text": "Available commands are /jackbot go | result | jackpot"
-    })
+      response_type: "ephemeral",
+      text: "Available commands are /jackbot go | result | jackpot"
+    });
   }
 });
 
@@ -73,7 +90,11 @@ function generateResult(): Promise<string> {
   return axios.get(RESULT_API_URL).then((response: any) => {
     const result: ResultInterface = response.data;
     const { day, month, year } = result.last.date;
-    return `Resultat för dragningen ${pad(year)}-${pad(month)}-${pad(day)}\n${result.last.numbers.join(" - ")} med bonusnummer ${result.last.euroNumbers.join(" - ")}`;
+    return `Resultat för dragningen ${pad(year)}-${pad(month)}-${pad(
+      day
+    )}\n${result.last.numbers.join(
+      " - "
+    )} med bonusnummer ${result.last.euroNumbers.join(" - ")}`;
   });
 }
 
@@ -99,11 +120,11 @@ interface ResultInterface {
       day: number;
       month: number;
       year: number;
-    },
-    numbers: number[],
-    euroNumbers: number[]
-  },
+    };
+    numbers: number[];
+    euroNumbers: number[];
+  };
   next: {
     jackpot: string;
-  }
+  };
 }
