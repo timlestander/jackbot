@@ -1,3 +1,4 @@
+// tslint:disable-next-line:no-var-requires
 require("dotenv").config();
 import express from "express";
 import bodyParser from "body-parser";
@@ -10,11 +11,12 @@ const RESULT_API_URL: string =
   "https://www.lottoland.com/api/drawings/euroJackpot";
 const EURO_IN_SEK: number = 10.59;
 
-mongoose.connection.on(
-  "error",
-  console.error.bind(console, "connection error:")
-);
-mongoose.connection.on("open", function() {
+mongoose.connection.on("error", () => {
+  // tslint:disable-next-line:no-console
+  console.error.bind(console, "connection error:");
+});
+mongoose.connection.on("open", () => {
+  // tslint:disable-next-line:no-console
   console.log("Connected to MongoDatabse");
 });
 
