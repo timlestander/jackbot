@@ -1,23 +1,23 @@
 // tslint:disable-next-line:no-var-requires
-require("dotenv").config();
-import express from "express";
-import bodyParser from "body-parser";
-import axios from "axios";
-import { LotteryRow } from "./database";
-import mongoose from "mongoose";
-import moment from "moment";
+require('dotenv').config();
+import express, { Response, Request } from 'express';
+import bodyParser from 'body-parser';
+import mongoose from 'mongoose';
+import { Commands } from './const';
+import { commandGo } from './commands/go';
+import { commandResult } from './commands/result';
+import { commandJackpot } from './commands/jackpot';
+import { commandChoose } from './commands/choose';
+import { saveCustomNumber } from './commands/saveCustomNumber';
+import { saveCustomBonus } from './commands/saveCustomBonus';
 
-const RESULT_API_URL: string =
-  "https://www.lottoland.com/api/drawings/euroJackpot";
-const EURO_IN_SEK: number = 10.59;
-
-mongoose.connection.on("error", () => {
+mongoose.connection.on('error', () => {
   // tslint:disable-next-line:no-console
-  console.error.bind(console, "connection error:");
+  console.error.bind(console, 'connection error:');
 });
-mongoose.connection.on("open", () => {
+mongoose.connection.on('open', () => {
   // tslint:disable-next-line:no-console
-  console.log("Connected to MongoDatabse");
+  console.log('Connected to database');
 });
 
 const app = express();
@@ -25,108 +25,54 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.post("/eurojackpot", async (req: any, res: any) => {
-  const command: string = req.body.text ? req.body.text : "help";
+app.post('/eurojackpot', async (req: any, res: any) => {
+  const command: Commands = req.body.text ? req.body.text : 'help';
   const team: string = req.body.team_id;
-
-  if (command === "go") {
-    let lotteryRow = await LotteryRow.findOne({
-      team_id: team,
-      week: moment().isoWeek()
-    });
-    if (!lotteryRow) {
-      lotteryRow = await LotteryRow.create({
-        team_id: team,
-        week: moment().isoWeek(),
-        row: `Trolig vinstrad: ${generateNumbers(
-          5,
-          50
-        )} med bonusnummer ${generateNumbers(2, 10)}`
+  console.log(command);
+  switch (command) {
+    case Commands.GO:
+      return commandGo(res, team);
+    case Commands.RESULT:
+      return commandResult(res);
+    case Commands.JACKPOT:
+      return commandJackpot(res);
+    case Commands.CHOOSE:
+      return commandChoose(res, team);
+    case Commands.HELP:
+    default:
+      return res.status(200).send({
+        response_type: 'ephemeral',
+        text: `Available commands are /jackbot ${Object.keys(Commands)
+          // @ts-ignore
+          .map((key) => Commands[key])
+          .join(' | ')}`,
       });
-    }
-
-    return res.status(200).send({
-      response_type: "in_channel",
-      text: lotteryRow.row
-    });
-  } else if (command === "result") {
-    const resultString: string = await generateResult();
-    return res.status(200).send({
-      response_type: "in_channel",
-      text: resultString
-    });
-  } else if (command === "jackpot") {
-    const jackpot: number = await getJackpot();
-    return res.status(200).send({
-      response_type: "in_channel",
-      text: `Jackpotten för nästa dragning är ish ${jackpot} millar (eurokurs ${EURO_IN_SEK})`
-    });
-  } else {
-    return res.status(200).send({
-      response_type: "ephemeral",
-      text: "Available commands are /jackbot go | result | jackpot"
-    });
   }
 });
 
-function generateNumbers(amount: number, highest: number): string {
-  if (amount > highest) {
-    amount = highest;
-  } else if (amount < 1) {
-    amount = 1;
+app.post('/interactive', async (req: Request, res: Response) => {
+  const payload = JSON.parse(req.body.payload);
+  const actions: SlackInteractive.Action[] = payload.actions;
+  const response_url = payload.response_url;
+  const team: SlackInteractive.Team = payload.team;
+  if (actions.length === 0) {
+    return res.send(400);
   }
 
-  const selectedNumbers: number[] = [];
+  const action = actions[0];
 
-  do {
-    const nextNumber: number = Math.floor(Math.random() * highest) + 1;
-    if (selectedNumbers.indexOf(nextNumber) === -1) {
-      selectedNumbers.push(nextNumber);
-    }
-  } while (selectedNumbers.length < amount);
-
-  return selectedNumbers.join(" - ");
-}
-
-function generateResult(): Promise<string> {
-  return axios.get(RESULT_API_URL).then((response: any) => {
-    const result: ResultInterface = response.data;
-    const { day, month, year } = result.last.date;
-    return `Resultat för dragningen ${pad(year)}-${pad(month)}-${pad(
-      day
-    )}\n${result.last.numbers.join(
-      " - "
-    )} med bonusnummer ${result.last.euroNumbers.join(" - ")}`;
-  });
-}
-
-function getJackpot(): Promise<number> {
-  return axios.get(RESULT_API_URL).then((response: any) => {
-    const result: ResultInterface = response.data;
-    return parseInt(result.next.jackpot, 10) * EURO_IN_SEK;
-  });
-}
-
-function pad(num: number): string {
-  return num < 10 ? `0${num}` : num.toString();
-}
+  const values = action.value.split(':');
+  switch (values[0]) {
+    case 'number':
+      return saveCustomNumber(res, action, response_url, team.id);
+    case 'bonus':
+      return saveCustomBonus(res, action, response_url, team.id);
+    default:
+      return res.send(400);
+  }
+});
 
 app.listen(process.env.PORT || 4390, () => {
   // tslint:disable-next-line:no-console
   console.log(`Example app listening on port ${process.env.PORT || 4390}!`);
 });
-
-interface ResultInterface {
-  last: {
-    date: {
-      day: number;
-      month: number;
-      year: number;
-    };
-    numbers: number[];
-    euroNumbers: number[];
-  };
-  next: {
-    jackpot: string;
-  };
-}
