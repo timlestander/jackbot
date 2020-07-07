@@ -12,10 +12,10 @@ export async function commandGo(response: Response, team: string) {
     lotteryRow = await LotteryRow.create({
       team_id: team,
       week: moment().isoWeek(),
-      row: `Trolig vinstrad: ${generateNumbers(
+      row: `Extremely likely winning row: ${generateNumbers(
         5,
         50
-      )} med bonusnummer ${generateNumbers(2, 10)}`,
+      )} with bonus digits ${generateNumbers(2, 10)}`,
     });
   }
 

@@ -14,11 +14,11 @@ function generateResult(): Promise<string> {
   return axios.get(RESULT_API_URL).then((response: any) => {
     const result: ResultInterface = response.data;
     const { day, month, year } = result.last.date;
-    return `Resultat för dragningen ${pad(year)}-${pad(month)}-${pad(
+    return `Resulting lottery draw for ${pad(year)}-${pad(month)}-${pad(
       day
     )}\n${result.last.numbers.join(
       ' - '
-    )} med bonusnummer ${result.last.euroNumbers.join(' - ')}`;
+    )} with digits ${result.last.euroNumbers.join(' - ')}`;
   });
 }
 
