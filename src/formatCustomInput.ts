@@ -1,12 +1,12 @@
 function createButtons(count: number, offset = 0, key: string) {
   return new Array(count).fill(0).map((_, index) => {
-    const number = index + 1 + offset;
-    const itemNumber = `${key}:${number}`;
+    const digit = index + 1 + offset;
+    const itemNumber = `${key}:${digit}`;
     return {
       type: 'button',
       text: {
         type: 'plain_text',
-        text: number.toString(),
+        text: digit.toString(),
       },
       value: itemNumber,
     };
