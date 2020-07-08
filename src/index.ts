@@ -28,6 +28,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.post('/eurojackpot', async (req: any, res: any) => {
   const command: Commands = req.body.text ? req.body.text : 'help';
   const team: string = req.body.team_id;
+  // tslint:disable-next-line:no-console
   console.log(command);
   switch (command) {
     case Commands.GO:

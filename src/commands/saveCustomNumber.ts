@@ -1,12 +1,12 @@
 import moment from 'moment';
 import { Response } from 'express';
 import { CustomLotteryRow, ICustomLotteryRow } from '../database';
-import Axios from 'axios';
+import axios from 'axios';
 
 export async function saveCustomNumber(
   response: Response,
   action: SlackInteractive.Action,
-  response_url: string,
+  responseUrl: string,
   teamId: string
 ) {
   let lotteryRow = await CustomLotteryRow.findOne({
@@ -25,7 +25,7 @@ export async function saveCustomNumber(
     });
   }
   // Send repsonse async
-  Axios.post(response_url, formatCustomLotterRow(lotteryRow), {
+  axios.post(responseUrl, formatCustomLotteryRow(lotteryRow), {
     headers: {
       'Content-type': 'application/json',
     },
@@ -33,12 +33,12 @@ export async function saveCustomNumber(
   return response.send(200);
 }
 
-function formatCustomLotterRow(lotteryRow: ICustomLotteryRow) {
+function formatCustomLotteryRow(lotteryRow: ICustomLotteryRow) {
   return {
     response_type: 'in_channel',
     delete_original: true,
     // TODO Fix this
-    text: `This week jackbot row: \n${new Array(5 || lotteryRow.numbers.length)
+    text: `This week's jackbot row: \n${new Array(5 || lotteryRow.numbers.length)
       .fill(0)
       .map((i, index) => lotteryRow.numbers[index] || '__')
       .join(' - ')} : ${new Array(2 || lotteryRow.numbers.length)
