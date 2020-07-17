@@ -4,11 +4,15 @@ import { ResultInterface } from './result';
 import { RESULT_API_URL } from '../const';
 import { EURO_IN_SEK } from '../const';
 
+function numberWithCommas(x) {
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 export async function commandJackpot(response: Response) {
   const jackpot: number = await getJackpotEuro();
   return response.status(200).send({
     response_type: 'in_channel',
-    text: `This weeks jackpot is €${jackpot}, which is ${(jackpot * EURO_IN_SEK)} SEK (using EUR/SEK exchange rate of ${EURO_IN_SEK})`,
+    text: `This weeks jackpot is €${numberWithCommas(jackpot)} which is ${(numberWithCommas(jackpot * EURO_IN_SEK))} SEK (using EUR/SEK exchange rate of ${EURO_IN_SEK})`,
   });
 }
 
