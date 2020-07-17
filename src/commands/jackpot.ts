@@ -4,7 +4,7 @@ import { ResultInterface } from './result';
 import { RESULT_API_URL } from '../const';
 import { EURO_IN_SEK } from '../const';
 
-function numberWithCommas(x) {
+function numberWithCommas(x: any) {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
