@@ -1,4 +1,4 @@
-declare module SlackInteractive {
+declare namespace SlackInteractive {
   export interface User {
     id: string;
     username: string;
