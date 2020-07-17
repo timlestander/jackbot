@@ -15,6 +15,6 @@ export async function commandJackpot(response: Response) {
 function getJackpotEuro(): Promise<number> {
   return axios.get(RESULT_API_URL).then((response: any) => {
     const result: ResultInterface = response.data;
-    return parseInt(result.next.jackpot, 10);
+    return parseInt(result.next.jackpot, 10) * 1000000;
   });
 }
